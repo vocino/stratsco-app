@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String        @id @default(cuid())
+  discordId       String        @unique
+  discordUsername String
+  isModerator     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  userGuilds      UserGuild[]
+  gameAccounts    GameAccount[]
+
+  @@map("users")
+}
+
+model Guild {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userGuilds     UserGuild[]
+  gameAccounts   GameAccount[]
+  discordConfig  GuildDiscordConfig?
+
+  @@map("guilds")
+}
+
+model UserGuild {
+  id        String   @id @default(cuid())
+  userId    String
+  guildId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, guildId])
+  @@map("user_guilds")
+}
+
+model GameAccount {
+  id                    String   @id @default(cuid())
+  userId                String
+  guildId               String
+  gameAccountId         String
+  characterName         String
+  rawMetadata           Json?
+  discordRoleSyncState  String   @default("PENDING") // PENDING, SYNCED, ERROR
+  discordRoleSyncError  String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, guildId, gameAccountId])
+  @@map("game_accounts")
+}
+
+model GuildDiscordConfig {
+  id            String   @id @default(cuid())
+  guildId       String   @unique
+  discordRoleId String
+  extraRoles    Json?    // Array of additional role IDs
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@map("guild_discord_configs")
+}
